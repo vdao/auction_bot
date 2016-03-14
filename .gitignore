@@ -1,0 +1,5 @@
+.vertx/
+.cache-main
+bin/
+tokens.properties
+properties.json
