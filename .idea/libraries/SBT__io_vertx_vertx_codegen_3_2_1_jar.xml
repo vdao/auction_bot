@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="SBT: io.vertx:vertx-codegen:3.2.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.vertx/vertx-codegen/jars/vertx-codegen-3.2.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/io.vertx/vertx-codegen/srcs/vertx-codegen-3.2.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
