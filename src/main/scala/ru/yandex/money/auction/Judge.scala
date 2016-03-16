@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import com.squareup.okhttp.{ConnectionPool, OkHttpClient, Request}
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.Logger
 import com.yandex.money.api.methods.params.P2pTransferParams
 import com.yandex.money.api.model.{MoneySource, Wallet}
 import com.yandex.money.api.net.{DefaultApiClient, OAuth2Session}
@@ -15,9 +16,13 @@ import io.vertx.core.{Handler, Vertx}
 import io.vertx.core.http.{HttpClient, HttpServerRequest}
 import org.json4s._
 import org.json4s.native.JsonMethods._
+import org.slf4j.LoggerFactory
 
 object Judge extends App {
+
   implicit val formats = DefaultFormats
+
+  val logger = Logger(LoggerFactory.getLogger("Judge"))
 
   val config = ConfigFactory.load("bot.properties")
 
@@ -44,7 +49,7 @@ object Judge extends App {
       .toMap
   else Map[String, String]()
 
-  println("restored token = " + tokensMap)
+  logger.info("restored token = " + tokensMap)
 
   startWS()
   run()
@@ -62,7 +67,7 @@ object Judge extends App {
 
         val code = request.getParam("code")
         val uri = "https://money.yandex.ru/oauth/token?code=" + code + "&client_id=" + client_id + "&grant_type=authorization_code&redirect_uri=http%3A%2F%2Flocalhost:8080"
-        println(uri)
+        logger.info(uri)
 
         val requestBuilder = new com.squareup.okhttp.Request.Builder()
         val httpResp = okHttpClient.newCall(requestBuilder.url(uri).get().build()).execute()
@@ -77,7 +82,7 @@ object Judge extends App {
     })
 
     server.listen(server_port)
-    println("Server started at localhost:" + server_port)
+    logger.info("Server started at localhost:" + server_port)
 
   }
 
@@ -91,15 +96,15 @@ object Judge extends App {
     val lastUpdates = callService("getUpdates", Map(("offset", offset.toString), ("timeout", "3"), ("limit", "1")))
     val command = parse(lastUpdates)
 
-    println("json = " + lastUpdates)
-    println("command = " + command)
+    logger.info("json = " + lastUpdates)
+    logger.info("command = " + command)
 
     hasText(command)
 
     command \ "result" match {
       case JArray(List()) => Unit
       case JArray(h :: t) => {
-        println("Got new message")
+        logger.info("Got new message")
 
         offset = ((command \ "result") (0) \ "update_id").extract[Int] + 1
 
@@ -108,7 +113,7 @@ object Judge extends App {
           val userInput = ((command \ "result") (0) \ "message" \ "text").extract[String]
           val actor = ((command \ "result") (0) \ "message" \ "from" \ "id").extract[String]
 
-          println("chatId=" + chatId + ", text=" + userInput + ", actor=" + actor)
+          logger.info("chatId=" + chatId + ", text=" + userInput + ", actor=" + actor)
 
           if (!auctionMap.contains(chatId)) {
             if (userInput.startsWith("/init")) {
@@ -194,7 +199,7 @@ object Judge extends App {
   }
 
   def processPayment(payer: String, amount: Int, receiver: String) = {
-    println("process-payment " +(payer, amount, receiver))
+    logger.info("process-payment " +(payer, amount, receiver))
 
     val session = new OAuth2Session(new DefaultApiClient(client_id))
     session.setAccessToken(tokensMap(payer))
@@ -228,11 +233,11 @@ object Judge extends App {
     })
 
     while (!paymentProcess.proceed()) {
-      println("process-payment, waiting")
+      logger.info("process-payment, waiting")
       Thread.sleep(2000);
     }
 
-    println("payment completed")
+    logger.info("payment completed")
   }
 
 }
