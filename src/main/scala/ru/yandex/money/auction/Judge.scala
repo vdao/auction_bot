@@ -29,7 +29,7 @@ object Judge extends App {
 
   val vertx = Vertx.vertx()
 
-  var offset =  0
+  var offset = 0
 
   val httpClient = createHttpClient()
   val okHttpClient = createOkHttpClient()
@@ -38,11 +38,11 @@ object Judge extends App {
   var auctionMap = Map[String, Auction]()
 
   var tokensMap = if (new File("tokens.properties").exists())
-      scala.io.Source.fromFile("tokens.properties").getLines()
-          .map((x) => x.trim.split("="))
-          .map((x) => x(0) -> x(1))
-          .toMap
-     else Map[String, String]()
+    scala.io.Source.fromFile("tokens.properties").getLines()
+      .map((x) => x.trim.split("="))
+      .map((x) => x(0) -> x(1))
+      .toMap
+  else Map[String, String]()
 
   println("restored token = " + tokensMap)
 
@@ -51,7 +51,7 @@ object Judge extends App {
 
   def startWS(): Unit = {
 
-    val server = vertx.createHttpServer();
+    val server = vertx.createHttpServer()
 
     server.requestHandler(new Handler[HttpServerRequest] {
       def handle(request: HttpServerRequest) {
@@ -69,13 +69,14 @@ object Judge extends App {
         val tokenResponse = httpResp.body().string()
         Judge.tokensMap = Judge.tokensMap.+((request.path().substring(1), (parse(tokenResponse) \ "access_token").extract[String]))
         new PrintWriter("tokens.properties") {
-          write(tokensMap.map((x: Tuple2[String, String]) => x._1 + "=" + x._2).fold("")((a, b) => a + "\n" + b).substring(1)); close
+          write(tokensMap.map((x: Tuple2[String, String]) => x._1 + "=" + x._2).fold("")((a, b) => a + "\n" + b).substring(1))
+          close
         }
         response.end()
       }
-    });
+    })
 
-    server.listen(server_port);
+    server.listen(server_port)
     println("Server started at localhost:" + server_port)
 
   }
@@ -93,20 +94,19 @@ object Judge extends App {
     println("json = " + lastUpdates)
     println("command = " + command)
 
-    println(command \ "result")
+    hasText(command)
 
     command \ "result" match {
       case JArray(List()) => Unit
       case JArray(h :: t) => {
         println("Got new message")
 
-        offset = ((command \ "result")(0) \ "update_id").extract[Int] + 1
-        //saveLastUpdate(offset);
+        offset = ((command \ "result") (0) \ "update_id").extract[Int] + 1
 
         if (hasText(command)) {
-          val chatId = ((command \ "result")(0) \ "message" \ "chat" \ "id").extract[String]
-          val userInput = ((command \ "result")(0) \ "message" \ "text").extract[String]
-          val actor = ((command \ "result")(0) \ "message" \ "from" \ "id").extract[String]
+          val chatId = ((command \ "result") (0) \ "message" \ "chat" \ "id").extract[String]
+          val userInput = ((command \ "result") (0) \ "message" \ "text").extract[String]
+          val actor = ((command \ "result") (0) \ "message" \ "from" \ "id").extract[String]
 
           println("chatId=" + chatId + ", text=" + userInput + ", actor=" + actor)
 
@@ -125,7 +125,7 @@ object Judge extends App {
             }
           }
 
-          val auction = auctionMap.get(chatId).get;
+          val auction = auctionMap.get(chatId).get
           val reply = auction.answer(userInput, actor)
 
           reply match {
@@ -160,8 +160,9 @@ object Judge extends App {
       if (bestOffer.isDefined) {
         processPayment(bestOffer.get._1, bestOffer.get._2, receiver)
       }
-    });
+    })
   }
+
   def callService(commandName: String, params: Map[String, String] = Map()) = {
     var uri = telegram_url + api_token + "/" + commandName + queryParams(params)
     okHttpClient.newCall(new Request.Builder().url(uri).get().build()).execute().body().string().replaceAllLiterally("\\/", "/")
@@ -175,25 +176,21 @@ object Judge extends App {
     "?" + params.seq.map(p => p._1 + "=" + URLEncoder.encode(p._2)).reduce((a, b) => a + "&" + b)
   }
 
-  def hasText(command: JValue): Boolean = {
-    try {
-      //      command.result(0).message.text.as[String]
-      return true;
-    } catch {
-      case _ => return false;
-    }
+  def hasText(command: JValue): Boolean = (command \\ "text") match {
+    case JObject(List()) => false
+    case _ => true
   }
 
   def createHttpClient(): HttpClient = vertx.createHttpClient();
 
   def createOkHttpClient(): OkHttpClient = {
-    val client = new OkHttpClient();
-    client.setReadTimeout(5, TimeUnit.SECONDS);
-    client.setConnectTimeout(1, TimeUnit.SECONDS);
-    client.setConnectionPool(new ConnectionPool(8, 10 * MillisecondsIn.MINUTE));
-    client.setFollowSslRedirects(false);
-    client.setFollowRedirects(false);
-    return client;
+    val client = new OkHttpClient()
+    client.setReadTimeout(5, TimeUnit.SECONDS)
+    client.setConnectTimeout(1, TimeUnit.SECONDS)
+    client.setConnectionPool(new ConnectionPool(8, 10 * MillisecondsIn.MINUTE))
+    client.setFollowSslRedirects(false)
+    client.setFollowRedirects(false)
+    return client
   }
 
   def processPayment(payer: String, amount: Int, receiver: String) = {
@@ -228,7 +225,7 @@ object Judge extends App {
       def getExtAuthFailUri(): String = {
         null
       }
-    });
+    })
 
     while (!paymentProcess.proceed()) {
       println("process-payment, waiting")
