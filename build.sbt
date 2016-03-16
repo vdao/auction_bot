@@ -17,6 +17,7 @@ lazy val root = (project in file(".")).
       "com.squareup.okhttp" % "okhttp" % "2.5.0",
       "io.netty" % "netty-all" % "4.0.33.Final",
       "joda-time" % "joda-time" % "2.8.2",
-      "org.json4s" %% "json4s-native" % "3.3.0"
+      "org.json4s" %% "json4s-native" % "3.3.0",
+      "com.typesafe" % "config" % "1.3.0"
     )
   )

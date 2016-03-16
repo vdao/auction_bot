@@ -1,59 +1,48 @@
-package ru.yandex.money.ebay
+package ru.yandex.money.auction
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 import java.net.URLEncoder
-import io.vertx.core.Vertx
-import io.vertx.core.http.HttpServerRequest
-import io.vertx.core.Handler
-import com.yandex.money.api.net.OAuth2Session
 import java.util.concurrent.TimeUnit
-import com.yandex.money.api.utils.MillisecondsIn
-import io.vertx.core.http.HttpClient
-import com.squareup.okhttp.OkHttpClient
-import com.squareup.okhttp.ConnectionPool
-import com.squareup.okhttp.Request
-import java.io.File
-import com.yandex.money.api.processes.PaymentProcess
-import com.yandex.money.api.net.DefaultApiClient
-import com.yandex.money.api.model.MoneySource
+
+import com.squareup.okhttp.{ConnectionPool, OkHttpClient, Request}
+import com.typesafe.config.ConfigFactory
 import com.yandex.money.api.methods.params.P2pTransferParams
-import com.yandex.money.api.processes.IPaymentProcess
-import com.yandex.money.api.model.Wallet
+import com.yandex.money.api.model.{MoneySource, Wallet}
+import com.yandex.money.api.net.{DefaultApiClient, OAuth2Session}
+import com.yandex.money.api.processes.{IPaymentProcess, PaymentProcess}
+import com.yandex.money.api.utils.MillisecondsIn
+import io.vertx.core.{Handler, Vertx}
+import io.vertx.core.http.{HttpClient, HttpServerRequest}
 import org.json4s._
 import org.json4s.native.JsonMethods._
-import org.json4s.JsonDSL._
 
 object Judge extends App {
   implicit val formats = DefaultFormats
 
-  val client_id = "30BB1793495E61D6C15DF1D4362582386178132A0EFC761FF030CDFB8CB67CBA"
-  val api_token = "bot202740024:AAFZ93Jal9IxrbA-NaQ8XtrCgpJshMHgK9c"
-  val server_port = 8080;
+  val config = ConfigFactory.load("bot.properties")
+
+  val client_id = config.getString("client_id")
+  val api_token = config.getString("api_token")
+  val server_port = config.getInt("server_port")
+  val telegram_url = config.getString("telegram_url")
+  val bot_public_url = config.getString("bot_public_url")
 
   val vertx = Vertx.vertx()
-  val props = parse(scala.io.Source.fromFile("properties.json").mkString)
-  var offset = (props \ "lastUpdate").extract[Int]
+
+  var offset =  0
+
   val httpClient = createHttpClient()
   val okHttpClient = createOkHttpClient()
   var receiver: String = null
 
   var auctionMap = Map[String, Auction]()
-  var tokensMap = {
-    if (new File("tokens.properties").exists()) {
-      var result = Map[String, String]()
-      scala.io.Source.fromFile("tokens.properties").mkString
-        .split("\n")
-        .filter { x => x.length > 0 }
-        .map { x => x.trim().split("=") }
-        .foreach { x => {
-          result = result.+((x(0), x(1)))
-        }
-        }
-      result
-    } else {
-      Map[String, String]()
-    }
-  }
+
+  var tokensMap = if (new File("tokens.properties").exists())
+      scala.io.Source.fromFile("tokens.properties").getLines()
+          .map((x) => x.trim.split("="))
+          .map((x) => x(0) -> x(1))
+          .toMap
+     else Map[String, String]()
 
   println("restored token = " + tokensMap)
 
@@ -67,8 +56,8 @@ object Judge extends App {
     server.requestHandler(new Handler[HttpServerRequest] {
       def handle(request: HttpServerRequest) {
         // This handler gets called for each request that arrives on the server
-        val response = request.response();
-        response.putHeader("Location", "https://telegram.me/siberian_oak_bot");
+        val response = request.response()
+        response.putHeader("Location", bot_public_url)
         response.setStatusCode(302)
 
         val code = request.getParam("code")
@@ -112,7 +101,7 @@ object Judge extends App {
         println("Got new message")
 
         offset = ((command \ "result")(0) \ "update_id").extract[Int] + 1
-        saveLastUpdate(offset);
+        //saveLastUpdate(offset);
 
         if (hasText(command)) {
           val chatId = ((command \ "result")(0) \ "message" \ "chat" \ "id").extract[String]
@@ -173,14 +162,8 @@ object Judge extends App {
       }
     });
   }
-  def saveLastUpdate(updateId: Int) = {
-    println("Update offset=" + updateId)
-    val props = "lastUpdate" -> updateId
-    new PrintWriter("properties.json") { write(compact(render(props))); close }
-  }
-
   def callService(commandName: String, params: Map[String, String] = Map()) = {
-    var uri = "https://api.telegram.org/" + api_token + "/" + commandName + queryParams(params)
+    var uri = telegram_url + api_token + "/" + commandName + queryParams(params)
     okHttpClient.newCall(new Request.Builder().url(uri).get().build()).execute().body().string().replaceAllLiterally("\\/", "/")
   }
 

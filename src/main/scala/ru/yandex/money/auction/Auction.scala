@@ -1,4 +1,4 @@
-package ru.yandex.money.ebay
+package ru.yandex.money.auction
 
 import java.util.Date
 import com.yandex.money.api.net.OAuth2Session
