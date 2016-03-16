@@ -32,11 +32,12 @@ object Judge extends App {
   val telegram_url = config.getString("telegram_url")
   val bot_public_url = config.getString("bot_public_url")
 
+  val searchCommand = new SearchCommand()
+
   val vertx = Vertx.vertx()
 
   var offset = 0
 
-  val httpClient = createHttpClient()
   val okHttpClient = createOkHttpClient()
   var receiver: String = null
 
@@ -125,6 +126,9 @@ object Judge extends App {
                   sendMessage(chatId, message)
                 case None => Unit
               }
+            } else if (userInput.startsWith("/search ")) {
+              sendMessage(chatId, searchCommand.execute(userInput.substring("/search ".length)))
+              return
             } else {
               return
             }
@@ -185,8 +189,6 @@ object Judge extends App {
     case JObject(List()) => false
     case _ => true
   }
-
-  def createHttpClient(): HttpClient = vertx.createHttpClient();
 
   def createOkHttpClient(): OkHttpClient = {
     val client = new OkHttpClient()
